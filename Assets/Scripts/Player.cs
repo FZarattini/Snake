@@ -2,6 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+enum Direction
+{
+    Left,
+    Right
+}
+
 public class Player : MonoBehaviour
 {
     //The initial blocks of the player
@@ -13,21 +19,33 @@ public class Player : MonoBehaviour
     float gridMoveTimer;
     float gridMoveTimerMax;
     public float playerSpeed;
+    public KeyCode LeftKey;
+    public KeyCode RightKey;
 
     //Player specific variables
     int playerSize;
     bool canMove = true;
+    
     List<Vector2Int> playerPositionList;
     List<GameObject> playerBodyBlocks;
     public bool canRam;
     public float slowPlayerFactor;
     public float moveDelay;
-    // Equals the amount of TIME_TRAVEL blocks the player has
-    int continues = 0;
+
+    // == 1 if player has unused TIME_TRAVEL block
+    // == 0 if player has no TIME_TRAVEL block or already used the latest one
+    public int continues = 0;
 
     //Event called everytime the player moves
     public delegate void PlayerMoved(Vector2Int gridPosition);
     public static event PlayerMoved OnPlayerMoved;
+
+
+    public Player(KeyCode LeftKey, KeyCode RightKey)
+    {
+        this.LeftKey = LeftKey;
+        this.RightKey = RightKey;
+    }
 
     private void Awake()
     {
@@ -62,19 +80,20 @@ public class Player : MonoBehaviour
     void Update()
     {
         HandleInput();
-        MovePlayer();   
+        if(canMove)
+            MovePlayer();   
     }
 
     //Listens to the input and calls the appropriate methods
     void HandleInput()
     {
-        if(Input.GetKeyDown(KeyCode.LeftArrow) && canMove)
+        if(Input.GetKeyDown(LeftKey) && canMove)
         {
             UpdatePlayerDirection(-gridMoveDirection.y, gridMoveDirection.x);
             StartCoroutine("InputDelay");
         }
 
-        if (Input.GetKeyDown(KeyCode.RightArrow) && canMove)
+        if (Input.GetKeyDown(RightKey) && canMove)
         {
             UpdatePlayerDirection(gridMoveDirection.y, -gridMoveDirection.x);
             StartCoroutine("InputDelay");
@@ -176,38 +195,36 @@ public class Player : MonoBehaviour
     }
 
 
-    //Kills the player
+    //Kills the player handling TIME_TRAVEL situation
     void Die()
     {
+        //If player has continues
         if(continues > 0)
         {
-            Vector2Int auxPosition = new Vector2Int();
             LoadLastCheckpoint();
-            int i;
-            for(i = 0; i < playerBodyBlocks.Count; i++) {
-                if (playerBodyBlocks[i].gameObject.name == "TIME_TRAVEL(Clone)")
-                {
-                    playerBodyBlocks.Remove(playerBodyBlocks[i]);
-                    if(i != playerBodyBlocks.Count - 1)
-                    {
-                        auxPosition = playerPositionList[i];                      
-                    }
-                    playerPositionList.Remove(playerPositionList[i]);
-                    break;
-                }
-            }
 
-            playerPositionList[i] = auxPosition;
+            playerPositionList.Insert(0, gridPosition);
 
-            for(i = i + 1; i < playerPositionList.Count; i++)
+            for(int i = 0; i < playerBodyBlocks.Count; i++)
             {
-                playerPositionList[i] = playerPositionList[i + 1];
+                Debug.Log("ITERAÇÃO " + i);
+                playerBodyBlocks[i].transform.position = new Vector3(playerPositionList[i].x, playerPositionList[i].y, 0f);
             }
-            continues--;
+
+
+            continues = 0;
+            
         }
+        //if player has no continues, simply delete all of its parts
         else
         {
-            Destroy(this.gameObject);
+            for(int i = 0; i < playerBodyBlocks.Count; i++)
+            {
+                DestroyImmediate(playerBodyBlocks[i]);
+            }
+            playerBodyBlocks.Clear();
+            playerPositionList.Clear();
+            DestroyImmediate(this.gameObject);
         }
     }
 
@@ -219,16 +236,35 @@ public class Player : MonoBehaviour
     //Saves the position of the player
     public void SaveCheckpoint()
     {
-        SaveLoadState.SaveState(playerPositionList, gridPosition);
+        SaveLoadState.SaveState(playerPositionList, gridPosition, playerBodyBlocks, gridMoveDirection);
         continues++;
     }
 
     //Loads the last position of the player
     void LoadLastCheckpoint()
     {
+        List<GameObject> tempBlocks = new List<GameObject>();
+        List<Vector2Int> tempPositions = new List<Vector2Int>();
+        GameObject removedObj;
 
+        gridPosition = new Vector2Int(SaveLoadState.LoadGridPosition().x, SaveLoadState.LoadGridPosition().y);
+        gridMoveDirection = new Vector2Int(SaveLoadState.LoadDirection().x, SaveLoadState.LoadDirection().y);
+        tempBlocks = SaveLoadState.LoadBlocks();
+        tempPositions = SaveLoadState.LoadPositions();
+
+        for (int i = 0; i < playerBodyBlocks.Count; i++)
+        {
+            if (tempBlocks.IndexOf(playerBodyBlocks[i]) == -1){
+                removedObj = playerBodyBlocks[i];
+                playerBodyBlocks.Remove(playerBodyBlocks[i]);
+                DestroyImmediate(removedObj);
+            }
+        }
+
+        playerPositionList = new List<Vector2Int>(SaveLoadState.LoadPositions());
     }
 
+    //Time in between possible inputs from the player
     IEnumerator InputDelay()
     {
         canMove = false;

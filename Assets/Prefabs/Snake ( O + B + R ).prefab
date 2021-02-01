@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8921815962865529029}
   - component: {fileID: 8921815962865529034}
   m_Layer: 0
-  m_Name: Snake
+  m_Name: Snake ( O + B + R )
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -51,3 +51,4 @@ MonoBehaviour:
   canRam: 0
   slowPlayerFactor: 0
   moveDelay: 0.2
+  continues: 0

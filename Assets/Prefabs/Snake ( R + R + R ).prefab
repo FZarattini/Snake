@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8921815962865529029}
   - component: {fileID: 8921815962865529034}
   m_Layer: 0
-  m_Name: Snake 1
+  m_Name: Snake ( R + R + R )
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44,7 +44,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _initialBlocks:
-  - {fileID: 1180717164961373431, guid: 23165705ecd1aa8438f4c01439717fd9, type: 3}
-  - {fileID: 1180717164961373431, guid: 23165705ecd1aa8438f4c01439717fd9, type: 3}
-  - {fileID: 1180717164961373431, guid: 23165705ecd1aa8438f4c01439717fd9, type: 3}
+  - {fileID: 6025162703782624069, guid: afb765c8c8a31e3409916c4fdd9d6587, type: 3}
+  - {fileID: 6025162703782624069, guid: afb765c8c8a31e3409916c4fdd9d6587, type: 3}
+  - {fileID: 6025162703782624069, guid: afb765c8c8a31e3409916c4fdd9d6587, type: 3}
   playerSpeed: 3
+  canRam: 0
+  slowPlayerFactor: 0
+  moveDelay: 0
+  continues: 0

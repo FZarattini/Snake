@@ -12,7 +12,7 @@ public class LevelGrid
     public static event BlockCaptured OnBlockCaptured;
 
     GameObject blockGO;
-    private Player player;
+    private List<Player> players;
 
     Vector2Int foodGridPosition;
     int width;
@@ -28,9 +28,9 @@ public class LevelGrid
     }
 
     //Sets up the references
-    public void Setup(Player player)
+    public void Setup(List<Player> player)
     {
-        this.player = player;
+        this.players = new List<Player>(player);
         SpawnBlock();
     }
 
@@ -40,12 +40,15 @@ public class LevelGrid
     {
         foodGridPosition = new Vector2Int(Random.Range(0, width), Random.Range(0, height));
 
-        if(player.GetFullPlayerGridPosition().IndexOf(foodGridPosition) != -1)
-            SpawnBlock();
-        else { 
-            blockGO = GameObject.Instantiate(AssetReference._instance.possibleBlocks[Random.Range(0, AssetReference._instance.possibleBlocks.Length)]);
-            blockGO.transform.position = new Vector3(foodGridPosition.x, foodGridPosition.y);
-            //OnBlockSpawned();
+        foreach(Player p in players)
+        {
+            if(p.GetFullPlayerGridPosition().IndexOf(foodGridPosition) != -1)
+                SpawnBlock();
+            else { 
+                blockGO = GameObject.Instantiate(AssetReference._instance.possibleBlocks[Random.Range(0, AssetReference._instance.possibleBlocks.Length)]);
+                blockGO.transform.position = new Vector3(foodGridPosition.x, foodGridPosition.y);
+                //OnBlockSpawned();
+            }
         }
 
     }
