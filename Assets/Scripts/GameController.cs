@@ -6,18 +6,10 @@ public class GameController : MonoBehaviour
 {
     GameController _instance;
     public GameObject playerSelectionCanvas;
-    public GameObject[] possiblePlayers;
+    public List<GameObject> possiblePlayers;
     LevelGrid levelGrid;
     List<Player> players;
-
-    //Keys Control
-    KeyCode leftKey;
-    KeyCode rightKey;
-    KeyCode kc;
-    int keysPressed = 0;
-    List<string> keysList = new List<string>();
-    public bool longPressTriggered = false;
-    bool checkInProgress = false;
+    List<GameObject> instantiatedPlayers;
 
     //Score
     float score;
@@ -31,35 +23,54 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
+        instantiatedPlayers = new List<GameObject>(0);
         playerSelectionCanvas.SetActive(true);
         players = new List<Player>();
     }
 
-    private void Update()
-    {
-        AnyKeyDown();
-    }
-
     //Starts the game
-    void StartGame()
+    public void StartGame(List<GameObject> chosenPlayers)
     {
-        playerSelectionCanvas.SetActive(false);
+        List<GameObject> chosenPlayersCopy = new List<GameObject>(chosenPlayers);
 
         levelGrid = new LevelGrid(20, 20);
+        
         levelGrid.Setup(players);
+
         LevelGrid.OnBlockCaptured += IncreaseScore;
+
+        playerSelectionCanvas.SetActive(false);
+        
+        for (int i = 0; i < players.Count; i++)
+        {
+            int index = chosenPlayersCopy[i].GetComponent<UISpriteManager>().spriteIndex;
+            instantiatedPlayers.Add(GameObject.Instantiate(possiblePlayers[index]));
+           
+            instantiatedPlayers[i].GetComponent<Player>().LeftKey = players[i].LeftKey;
+            instantiatedPlayers[i].GetComponent<Player>().RightKey = players[i].RightKey;
+            instantiatedPlayers[i].GetComponent<Player>().SetGridPosition(players[i].GetGridPosition()) ;
+        }
+
         UpdateScoreUI();
-        Time.timeScale = 1f;
     }
 
-    void IncreaseScore(GameObject block)
+    public void SetPlayers(List<Player> playersToSet)
     {
-        if (block.GetComponent<ENERGY_POWER>())
-            score += 5;
-        else if (block.GetComponent<TIME_TRAVEL>())
-            score += 10;
-        else if (block.GetComponent<BATTERING_RAM>())
-            score += 15;
+        this.players = new List<Player>(playersToSet);
+    }
+
+    void IncreaseScore(GameObject block, Player player)
+    {
+        int index;
+
+        if ((index = players.IndexOf(player)) != -1) { 
+            if (block.GetComponent<ENERGY_POWER>())
+                players[index].score += 5;
+            else if (block.GetComponent<TIME_TRAVEL>())
+                players[index].score += 10;
+            else if (block.GetComponent<BATTERING_RAM>())
+                players[index].score += 15;
+        }
 
         UpdateScoreUI();
     }
@@ -68,55 +79,4 @@ public class GameController : MonoBehaviour
     {
         AssetReference._instance.scoreText.text = "Score: " + score.ToString();
     }
-
-    void PlayerSelection()
-    {
-        //players.Add(new Player());
-    }
-
-    public void AnyKeyDown()
-    {
-        if (keysPressed == 2 && !checkInProgress)
-        {
-            StartCoroutine(CheckLongPress((i) => { longPressTriggered = i; }));
-            checkInProgress = true;
-        }
-
-        if (longPressTriggered)
-        {
-            leftKey = (KeyCode)System.Enum.Parse(typeof(KeyCode), keysList[0]);
-            rightKey = (KeyCode)System.Enum.Parse(typeof(KeyCode), keysList[1]);
-
-            //INSTANCIAR JOGADOR NO PAINEL DE SELEÇÃO             
-        }
-
-
-        foreach (string key in AlphaNumKeys.keys)
-        {
-            kc = (KeyCode)System.Enum.Parse(typeof(KeyCode), key);
-
-
-            if (Input.GetKeyDown(kc))
-            {
-                keysList.Add(key);
-                keysPressed++;
-            }
-
-            if (Input.GetKeyUp(kc))
-            {
-                keysList.Remove(key);
-                StopCoroutine("CheckLongPress");
-                checkInProgress = false;
-                keysPressed--;
-            }
-        }
-    }
-
-    IEnumerator CheckLongPress( System.Action<bool> callback)
-    {
-        yield return new WaitForSeconds(1f);
-        callback(true);
-        yield return null;
-    }
-
 }

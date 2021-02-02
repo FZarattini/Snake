@@ -2,12 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-enum Direction
-{
-    Left,
-    Right
-}
-
 public class Player : MonoBehaviour
 {
     //The initial blocks of the player
@@ -25,6 +19,7 @@ public class Player : MonoBehaviour
     //Player specific variables
     int playerSize;
     bool canMove = true;
+    public float score = 0f;
     
     List<Vector2Int> playerPositionList;
     List<GameObject> playerBodyBlocks;
@@ -37,21 +32,21 @@ public class Player : MonoBehaviour
     public int continues = 0;
 
     //Event called everytime the player moves
-    public delegate void PlayerMoved(Vector2Int gridPosition);
+    public delegate void PlayerMoved(Vector2Int gridPosition, Player player);
     public static event PlayerMoved OnPlayerMoved;
 
 
-    public Player(KeyCode LeftKey, KeyCode RightKey)
+    public Player(KeyCode LeftKey, KeyCode RightKey, Vector2Int gridPosition)
     {
         this.LeftKey = LeftKey;
         this.RightKey = RightKey;
+        this.gridPosition = gridPosition;
     }
 
     private void Awake()
     {
         //Initialization
-        gridMoveDirection = new Vector2Int(1, 0);
-        gridPosition = new Vector2Int(10, 10);
+        gridMoveDirection = new Vector2Int(0, 1);
         playerPositionList = new List<Vector2Int>();
         playerBodyBlocks = new List<GameObject>();
       
@@ -65,7 +60,7 @@ public class Player : MonoBehaviour
         for(int i = 0; i < 3; i++)
         {
             _initialBlocks[i] = GameObject.Instantiate(_initialBlocks[i]);
-            GrowPlayer(_initialBlocks[i]);
+            GrowPlayer(_initialBlocks[i], this);
         }
 
         //Insert the initial body blocks of the snake (except the head)
@@ -80,23 +75,20 @@ public class Player : MonoBehaviour
     void Update()
     {
         HandleInput();
-        if(canMove)
-            MovePlayer();   
+        MovePlayer();   
     }
 
     //Listens to the input and calls the appropriate methods
     void HandleInput()
     {
-        if(Input.GetKeyDown(LeftKey) && canMove)
+        if(Input.GetKeyDown(LeftKey))
         {
             UpdatePlayerDirection(-gridMoveDirection.y, gridMoveDirection.x);
-            StartCoroutine("InputDelay");
         }
 
-        if (Input.GetKeyDown(RightKey) && canMove)
+        if (Input.GetKeyDown(RightKey))
         {
             UpdatePlayerDirection(gridMoveDirection.y, -gridMoveDirection.x);
-            StartCoroutine("InputDelay");
         }
     }
 
@@ -147,7 +139,7 @@ public class Player : MonoBehaviour
                
             }
         }
-        OnPlayerMoved(gridPosition);
+        OnPlayerMoved(gridPosition, this);
     }
 
     //Rotates the player
@@ -171,6 +163,11 @@ public class Player : MonoBehaviour
         return gridPosition;
     }
 
+    public void SetGridPosition(Vector2Int newGridPosition)
+    {
+        gridPosition = newGridPosition;
+    }
+
     //Returns the full list of position occupied by the player (all blocks)
     public List<Vector2Int> GetFullPlayerGridPosition()
     {
@@ -180,20 +177,22 @@ public class Player : MonoBehaviour
     }
 
     //Grows the player when a block is captured
-    void GrowPlayer(GameObject block)
+    void GrowPlayer(GameObject block, Player player)
     {
-        playerBodyBlocks.Insert(0, block);
-        playerSize++;
-        block.GetComponent<Block>().Ability(this);
+        if(player == this)
+        {
+            playerBodyBlocks.Insert(0, block);
+            playerSize++;
+            block.GetComponent<Block>().Ability(this);
+        }
     }
-
 
     //Slows the player by a factor
-    void SlowPlayer(GameObject block)
+    void SlowPlayer(GameObject block, Player player)
     {
-        playerSpeed -= slowPlayerFactor;
+        if(player == this)
+            playerSpeed -= slowPlayerFactor;
     }
-
 
     //Kills the player handling TIME_TRAVEL situation
     void Die()
@@ -207,7 +206,6 @@ public class Player : MonoBehaviour
 
             for(int i = 0; i < playerBodyBlocks.Count; i++)
             {
-                Debug.Log("ITERAÇÃO " + i);
                 playerBodyBlocks[i].transform.position = new Vector3(playerPositionList[i].x, playerPositionList[i].y, 0f);
             }
 
@@ -264,11 +262,4 @@ public class Player : MonoBehaviour
         playerPositionList = new List<Vector2Int>(SaveLoadState.LoadPositions());
     }
 
-    //Time in between possible inputs from the player
-    IEnumerator InputDelay()
-    {
-        canMove = false;
-        yield return new WaitForSeconds(moveDelay * gridMoveTimerMax);
-        canMove = true;
-    }
 }

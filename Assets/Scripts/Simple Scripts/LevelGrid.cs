@@ -8,7 +8,7 @@ public class LevelGrid
     public delegate void SpawnedBlock();
     public static event SpawnedBlock OnBlockSpawned;
 
-    public delegate void BlockCaptured(GameObject block);
+    public delegate void BlockCaptured(GameObject block, Player player);
     public static event BlockCaptured OnBlockCaptured;
 
     GameObject blockGO;
@@ -30,25 +30,22 @@ public class LevelGrid
     //Sets up the references
     public void Setup(List<Player> player)
     {
-        this.players = new List<Player>(player);
+        players = new List<Player>(player);
+
         SpawnBlock();
     }
 
 
     //Spawns a new block on the level in a position not occupied by the player
     void SpawnBlock()
-    {
+    {    
         foodGridPosition = new Vector2Int(Random.Range(0, width), Random.Range(0, height));
 
         foreach(Player p in players)
-        {
-            if(p.GetFullPlayerGridPosition().IndexOf(foodGridPosition) != -1)
-                SpawnBlock();
-            else { 
-                blockGO = GameObject.Instantiate(AssetReference._instance.possibleBlocks[Random.Range(0, AssetReference._instance.possibleBlocks.Length)]);
-                blockGO.transform.position = new Vector3(foodGridPosition.x, foodGridPosition.y);
-                //OnBlockSpawned();
-            }
+        {            
+            blockGO = GameObject.Instantiate(AssetReference._instance.possibleBlocks[Random.Range(0, AssetReference._instance.possibleBlocks.Length)]);
+            blockGO.transform.position = new Vector3(foodGridPosition.x, foodGridPosition.y);
+            break;
         }
 
     }
@@ -60,11 +57,11 @@ public class LevelGrid
     }
 
     //Captures the block
-    public void GetBlock(Vector2Int playerGridPosition)
-    {       
+    public void GetBlock(Vector2Int playerGridPosition, Player player)
+    {   
         if(playerGridPosition == foodGridPosition)
         {
-            OnBlockCaptured(blockGO);
+            OnBlockCaptured(blockGO, player);
             //Object.DestroyImmediate(blockGO);
             SpawnBlock();
         }
