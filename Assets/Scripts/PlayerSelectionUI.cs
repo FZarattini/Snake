@@ -66,8 +66,8 @@ public class PlayerSelectionUI : MonoBehaviour
     public void AddPlayer()
     {
         //Where the players will spawn
-        Vector2Int playerSpawnPosition = new Vector2Int(1 + 5 * players.Count, 10);
-        Vector2Int aiPlayerSpawnPosition = new Vector2Int(playerSpawnPosition.x + 2, 10);
+        Vector2Int playerSpawnPosition = new Vector2Int(1 + 15 * players.Count, 10);
+        Vector2Int aiPlayerSpawnPosition = new Vector2Int(playerSpawnPosition.x + 5, 10);
 
         //creating new player and AI player
         Player newPlayer = new Player(leftKey, rightKey, playerSpawnPosition, false);

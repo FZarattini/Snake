@@ -19,6 +19,8 @@ public class LevelGrid
     int width;
     int height;
 
+    public Vector2Int FoodGridPosition { get { return foodGridPosition; } }
+
     //Constructor
     public LevelGrid(int width, int height)
     {
@@ -36,7 +38,7 @@ public class LevelGrid
         players = new List<Player>(player);
     }
 
-    //Spawns a new block on the level in a position not occupied by any players
+    //Spawns a new block on the level in a random position not occupied by any players
     public void SpawnBlock()
     {
         foodGridPosition = new Vector2Int(Random.Range(0, width), Random.Range(0, height));
@@ -70,8 +72,8 @@ public class LevelGrid
         {
             OnBlockCaptured(blockGO, player);
             SpawnBlock();
-            if (OnBlockSpawned != null)
-                OnBlockSpawned();
+
+            OnBlockSpawned();
         }
     }
 
@@ -101,7 +103,7 @@ public class LevelGrid
         //Iterates every player
         for (int i = 0; i < _gc.GetInstantiatedPlayers().Count; i++)
         {
-            if (_gc.GetInstantiatedPlayers()[i] != null)
+            if (_gc.GetInstantiatedPlayers()[i] != null )
                 ip = _gc.GetInstantiatedPlayers()[i].GetComponent<Player>();
             else
                 return;
@@ -109,7 +111,7 @@ public class LevelGrid
             //Iterates every other player starting from the immediate next one
             for (int j = i + 1; j < _gc.GetInstantiatedPlayers().Count; j++)
             {
-                if (_gc.GetInstantiatedPlayers()[j] != null)
+                if (_gc.GetInstantiatedPlayers()[j] != null )
                     jp = _gc.GetInstantiatedPlayers()[j].GetComponent<Player>();
                 else
                     return;
@@ -120,17 +122,17 @@ public class LevelGrid
                     if (ip != null && jp != null)
                     {
 
-                        if (ip.GetGridPosition() == jp.GetGridPosition())
+                        if (ip.GridPosition == jp.GridPosition)
                         {
                             //If both collide by the head, both dies
                             ip.Die();
                             jp.Die();
                             return;
                         }
-                        else if (ip.GetGridPosition() == jp.GetFullPlayerGridPosition()[k])
+                        else if (ip.GridPosition == jp.GetFullPlayerGridPosition()[k])
                         {
-                            //If the other hits the midsection of the first, tries to Ram
-                            ip.Ram(jp);
+                            //If the player i hits the player j in the midsection, tries to ram it
+                            ip.Ram(jp, jp.GetFullPlayerGridPosition()[k]);
                             return;
                         }
                     }                   
@@ -138,19 +140,14 @@ public class LevelGrid
 
                 for (int l = 0; l < ip.GetFullPlayerGridPosition().Count; l++)
                 {
-                    if (jp.GetGridPosition() == ip.GetFullPlayerGridPosition()[l])
+                    if (jp.GridPosition == ip.GetFullPlayerGridPosition()[l])
                     {
-                        //If one hits the midsection of the other, tries to Ram
-                        jp.Ram(ip);
+                        //If the player j hits the player i in the midsection, tries to ram it
+                        jp.Ram(ip, ip.GetFullPlayerGridPosition()[l]);
                         return;
                     }
                 }
             }
         }
-    }
-
-    public Vector2Int GetFoodGridPosition()
-    {
-        return foodGridPosition;
     }
 }

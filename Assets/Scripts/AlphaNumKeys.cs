@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class AlphaNumKeys : MonoBehaviour
 {
+    //List with the alphanum keys on a keyboard
     public List<string> keys;
 
     private void Awake()

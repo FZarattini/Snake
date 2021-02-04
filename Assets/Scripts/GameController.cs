@@ -13,11 +13,7 @@ public class GameController : MonoBehaviour
     List<GameObject> instantiatedPlayers;
     bool gameStarted = false;
 
-    //public bool GameStarted { get { return gameStarted; } }
     public List<Player> Players { get { return players; } }
-
-    //Score
-    float score;
 
     public delegate void GameStarted();
     public static event GameStarted OnGameStarted;
@@ -64,7 +60,7 @@ public class GameController : MonoBehaviour
         //Turn off the player selection canvas
         playerSelectionCanvas.SetActive(false);
 
-        //Sets the background in accordance with the amount of players on the game
+        //Sets the background and the camera in accordance with the amount of players on the game
         Vector3 backgroundScale = AssetReference._instance.background.transform.localScale;
         Vector3 backGroundPosition = AssetReference._instance.background.transform.position;
 
@@ -77,15 +73,16 @@ public class GameController : MonoBehaviour
         {
             int index = chosenPlayersCopy[i].GetComponent<UISpriteManager>().spriteIndex;
             instantiatedPlayers.Add(GameObject.Instantiate(possiblePlayers[index]));
+            Player instPlayer = instantiatedPlayers[i].GetComponent<Player>();
 
+            instPlayer.LeftKey = players[i].LeftKey;
+            instPlayer.RightKey = players[i].RightKey;
+            instPlayer.GridPosition = players[i].GridPosition;
+            instPlayer.AIControlled = (players[i].AIControlled);
+            instPlayer.Setup(levelGrid);
+            instPlayer.playerID = i + 1;
 
-            instantiatedPlayers[i].GetComponent<Player>().LeftKey = players[i].LeftKey;
-            instantiatedPlayers[i].GetComponent<Player>().RightKey = players[i].RightKey;
-            instantiatedPlayers[i].GetComponent<Player>().SetGridPosition(players[i].GetGridPosition());
-            instantiatedPlayers[i].GetComponent<Player>().SetAIControlled(players[i].GetAIControlled());
-            instantiatedPlayers[i].GetComponent<Player>().Setup(levelGrid);
-
-            if (instantiatedPlayers[i].GetComponent<Player>().GetAIControlled() == true)
+            if (instPlayer.AIControlled == true)
                 instantiatedPlayers[i].AddComponent<AIPlayer>();
         }
 
@@ -103,20 +100,12 @@ public class GameController : MonoBehaviour
     //Increases the score when a block is caught
     void IncreaseScore(GameObject block, Player player)
     {
-        for (int i = 0; i < players.Count; i++)
-        {
-   
-            if (players[i].LeftKey == player.LeftKey)
-            {
-                if (block.GetComponent<ENERGY_POWER>())
-                    players[i].score += 5;
-                else if (block.GetComponent<TIME_TRAVEL>())               
-                    players[i].score += 10;
-                else if (block.GetComponent<BATTERING_RAM>())
-                    players[i].score += 15;
-
-            }
-        }
+        if (block.GetComponent<ENERGY_POWER>())
+            player.score += 5;
+        else if (block.GetComponent<TIME_TRAVEL>())
+            player.score += 10;
+        else if (block.GetComponent<BATTERING_RAM>())
+            player.score += 15;
 
         OnIncreasedScore();
     }
@@ -128,6 +117,12 @@ public class GameController : MonoBehaviour
         {
             if (players[i].LeftKey == player.LeftKey)
                 players.RemoveAt(i);
+        }
+
+        for(int i = 0; i < instantiatedPlayers.Count; i++)
+        {
+            if (instantiatedPlayers[i].GetComponent<Player>() == player)
+                instantiatedPlayers.RemoveAt(i);
         }
     }
 

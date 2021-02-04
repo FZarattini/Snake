@@ -6,8 +6,6 @@ using UnityEngine.UI;
 public class UIScore : MonoBehaviour
 {
     public GameController _gc;
-    List<Text> scores;
-    bool scoresInstantiated = false;
     public GameObject scoreTextPrefab;
     List<GameObject> scoreTextObj;
 
@@ -34,9 +32,10 @@ public class UIScore : MonoBehaviour
     // Updates the score text displayed on the screen for each player
     void UpdateScoreUI()
     {
-        for (int i = 0; i < _gc.Players.Count; i++)
+        for(int  i = 0; i < _gc.GetInstantiatedPlayers().Count; i++)
         {
-            scoreTextObj[i].GetComponent<Text>().text = "Player " + (i + 1) + ": " + _gc.Players[i].score.ToString();
+            Player player = _gc.GetInstantiatedPlayers()[i].GetComponent<Player>();
+            scoreTextObj[player.playerID - 1].GetComponent<Text>().text = "Player " + (player.playerID) + ": " + player.score.ToString();
         }
     }
 }

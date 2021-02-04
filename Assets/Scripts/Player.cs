@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    bool aiControlled;
 
     //Setup references
     LevelGrid levelGrid;
@@ -26,6 +25,8 @@ public class Player : MonoBehaviour
     bool canMove;
 
     //Player specific variables
+    bool aiControlled;
+    public int playerID;
     int playerSize;
     bool canInput = true;
     public float score = 0f;
@@ -47,6 +48,14 @@ public class Player : MonoBehaviour
     public delegate void PlayerDied(Player player);
     public static event PlayerDied OnPlayerDeath;
 
+    public bool AIControlled { get { return aiControlled; } set { aiControlled = value; } }
+
+    public Vector2Int GridPosition { get { return gridPosition; } set { gridPosition = value; } }
+
+    public List<GameObject> PlayerBodyBlocks { get { return playerBodyBlocks; } }
+
+    public Vector2Int MoveGridDirection { get { return gridMoveDirection; } }
+
 
     //Player constructor
     public Player(KeyCode LeftKey, KeyCode RightKey, Vector2Int gridPosition, bool aiControlled)
@@ -60,7 +69,6 @@ public class Player : MonoBehaviour
     private void Awake()
     {
         //Initialization
-        canMove = true;
         gridMoveDirection = new Vector2Int(0, 1);
         playerPositionList = new List<Vector2Int>();
         playerBodyBlocks = new List<GameObject>();
@@ -81,10 +89,6 @@ public class Player : MonoBehaviour
             GrowPlayer(_initialBlocks[i], this);
         }
 
-        //Insert the initial body blocks of the snake (except the head)
-        playerPositionList.Insert(0, gridPosition);
-        playerPositionList.Insert(0, gridPosition);
-
         LevelGrid.OnBlockCaptured += GrowPlayer;
         LevelGrid.OnBlockCaptured += SlowPlayer;
 
@@ -97,8 +101,7 @@ public class Player : MonoBehaviour
         if(!aiControlled)
             HandleInput();
 
-        if(canMove)
-            MovePlayer();
+        MovePlayer();
 
         //Delay between inputs
         if (!canInput)
@@ -112,6 +115,7 @@ public class Player : MonoBehaviour
 
     }
 
+    //References the level grid
     public void Setup(LevelGrid lg)
     {
         this.levelGrid = lg;
@@ -163,7 +167,7 @@ public class Player : MonoBehaviour
             //Wraps the player on the level grid
             gridPosition = levelGrid.ValidateGridPosition(gridPosition);
 
-            //Makes the body follow the head
+            //Removes from the end of the position list
             if(playerPositionList.Count >= playerSize + 1)
             {
                 playerPositionList.RemoveAt(playerPositionList.Count - 1);
@@ -183,15 +187,12 @@ public class Player : MonoBehaviour
             //Kills the player if it touches itself
             for (int i = 0; i < playerBodyBlocks.Count; i++)
             {
-                if((gridPosition.x == playerBodyBlocks[i].transform.position.x) && (gridPosition.y == playerBodyBlocks[i].transform.position.y)) { Die(); }
-               
+                if((gridPosition.x == playerBodyBlocks[i].transform.position.x) && (gridPosition.y == playerBodyBlocks[i].transform.position.y)) 
+                    Die();         
             }          
         }
 
         OnPlayerMoved(gridPosition, this);
-
-        //Everytime a player moves, checks if there was collision with other players
-        //levelGrid.CheckPlayerCollision();
     }
 
     //Rotates the player
@@ -207,30 +208,6 @@ public class Player : MonoBehaviour
         if (n < 0) 
             n += 360;
         return n;
-    }
-
-    //Returns the grid position of the player
-    public Vector2Int GetGridPosition()
-    {
-        return gridPosition;
-    }
-
-    //Returns the grid direction of the player
-    public Vector2Int GetGridDirection()
-    {
-        return gridMoveDirection;
-    }
-
-    //Sets the grid position value of the player
-    public void SetGridPosition(Vector2Int newGridPosition)
-    {
-        gridPosition = newGridPosition;
-    }
-
-    //Returns the list of body blocks of the player
-    public List<GameObject> GetBodyBlocks()
-    {
-        return playerBodyBlocks;
     }
 
     //Returns the full list of position occupied by the player (all blocks)
@@ -268,7 +245,7 @@ public class Player : MonoBehaviour
         {
             LoadLastCheckpoint();
 
-            playerPositionList.Insert(0, gridPosition);
+            //playerPositionList.Insert(0, gridPosition);
 
             for(int i = 0; i < playerBodyBlocks.Count; i++)
             {
@@ -287,40 +264,40 @@ public class Player : MonoBehaviour
             }
             playerBodyBlocks.Clear();
             playerPositionList.Clear();
-            DestroyImmediate(this.gameObject);
             OnPlayerDeath(this);
+            DestroyImmediate(this.gameObject);
         }
     }
 
-    public void Ram(Player otherPlayer)
+    //Ram ability. If the player has rams available, it tries breaks the other player from the block it hits to the end and keeps on going
+    public void Ram(Player otherPlayer, Vector2Int hitPosition)
     {
-        if (rams > 0)
+        if(rams == 0)
         {
-            otherPlayer.SetCanMove(false);
+            Die();
+        }
+        else
+        {
+            //Removes the blocks from the hit player starting from the hit position
+            int index = otherPlayer.GetFullPlayerGridPosition().IndexOf(hitPosition);
+
+            for(int i = otherPlayer.PlayerBodyBlocks.Count - 1; i >= index; i--)
+            {
+                GameObject blockToRemove;
+                otherPlayer.GetFullPlayerGridPosition().RemoveAt(i);
+                blockToRemove = otherPlayer.PlayerBodyBlocks[i];
+                otherPlayer.PlayerBodyBlocks.RemoveAt(i);
+
+                if (blockToRemove.GetComponent<BATTERING_RAM>())
+                    otherPlayer.rams--;
+
+                DestroyImmediate(blockToRemove);
+                otherPlayer.playerSize--;
+            } 
 
             rams--;
             return;
         }
-        else
-        {
-            Die();
-        }
-    }
-
-    //Sets the variable canMove
-    public void SetCanMove(bool value)
-    {
-        canMove = value;
-    }
-
-    public bool GetAIControlled()
-    {
-        return aiControlled;
-    }
-
-    public void SetAIControlled(bool value)
-    {
-        aiControlled = value;
     }
 
     //Saves the position of the player
@@ -333,18 +310,18 @@ public class Player : MonoBehaviour
     //Loads the last checkpoint of the player
     void LoadLastCheckpoint()
     {
-        List<GameObject> tempBlocks = new List<GameObject>();
-        List<Vector2Int> tempPositions = new List<Vector2Int>();
+        List<GameObject> tempBlocks;
         GameObject removedObj;
 
         gridPosition = new Vector2Int(saveLoad.LoadGridPosition().x, saveLoad.LoadGridPosition().y);
         gridMoveDirection = new Vector2Int(saveLoad.LoadDirection().x, saveLoad.LoadDirection().y);
         tempBlocks = saveLoad.LoadBlocks();
-        tempPositions = saveLoad.LoadPositions();
+
 
         for (int i = 0; i < playerBodyBlocks.Count; i++)
         {
-            if (tempBlocks.IndexOf(playerBodyBlocks[i]) == -1){
+            if (tempBlocks.IndexOf(playerBodyBlocks[i]) == -1)
+            {
                 removedObj = playerBodyBlocks[i];
                 playerBodyBlocks.Remove(playerBodyBlocks[i]);
                 DestroyImmediate(removedObj);
@@ -353,5 +330,4 @@ public class Player : MonoBehaviour
 
         playerPositionList = new List<Vector2Int>(saveLoad.LoadPositions());
     }
-
 }
