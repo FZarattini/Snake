@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class BATTERING_RAM : Block
 {
+    //The ability the block grants the player
     public override void Ability(Player player)
     {
-        //Makes the player able to ram other players
+        player.rams++;
         base.Ability(player);
     }
 }

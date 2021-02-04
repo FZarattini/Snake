@@ -16,6 +16,6 @@ public class AssetReference : MonoBehaviour
 
     public Sprite snakeHeadSprite;
     public Text scoreText;
-
-
+    public GameObject background;
+    public Camera mainCamera;
 }

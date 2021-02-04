@@ -44,6 +44,7 @@ public class PlayerSelectionUI : MonoBehaviour
         ConfirmPlayer();
         CyclePlayer();
 
+        //Timer to register the long press
         if (runTimer)
             longPressTimer -= Time.deltaTime;
         else
@@ -64,20 +65,33 @@ public class PlayerSelectionUI : MonoBehaviour
     //Add a new player to the board
     public void AddPlayer()
     {
-        Player newPlayer = new Player(leftKey, rightKey, new Vector2Int(10, 10* players.Count));
+        //Where the players will spawn
+        Vector2Int playerSpawnPosition = new Vector2Int(1 + 5 * players.Count, 10);
+        Vector2Int aiPlayerSpawnPosition = new Vector2Int(playerSpawnPosition.x + 2, 10);
+
+        //creating new player and AI player
+        Player newPlayer = new Player(leftKey, rightKey, playerSpawnPosition, false);
+        Player newAIPlayer = new Player(KeyCode.None, KeyCode.None, aiPlayerSpawnPosition, true); ;
+
         players.Add(newPlayer);
+        players.Add(newAIPlayer);
+
+        //Instantiates the icons
+        instantiatedIcons.Add(GameObject.Instantiate(playerIconPrefab, iconPosition));
+        instantiatedIcons[instantiatedIcons.Count - 1].GetComponent<Image>().sprite = playerIcons[0];
+        instantiatedIcons[instantiatedIcons.Count - 1].transform.GetChild(0).GetComponent<Text>().text = "Press "
+            + keysList[0] + " or " + keysList[1] + " to change!";
 
         instantiatedIcons.Add(GameObject.Instantiate(playerIconPrefab, iconPosition));
 
         instantiatedIcons[instantiatedIcons.Count - 1].GetComponent<Image>().sprite = playerIcons[0];
-        instantiatedIcons[instantiatedIcons.Count - 1].transform.GetChild(0).GetComponent<Text>().text = "Press "
-            + keysList[0] + " or " + keysList[1] + " to change!"; 
+        instantiatedIcons[instantiatedIcons.Count - 1].transform.GetChild(0).GetComponent<Text>().text = "AI Player";
 
     }
 
+    //Cycle through the icons of the possible players when player presses its own registered left and right keys
     public void CyclePlayer()
     {
-        //Cycle through the icons of the possible players
         for(int i = 0; i < usedKeys.Count; i++)
         {
             kc = (KeyCode)System.Enum.Parse(typeof(KeyCode), usedKeys[i]);
@@ -86,19 +100,20 @@ public class PlayerSelectionUI : MonoBehaviour
             {
                 if(i%2 == 0)
                 {
-                    instantiatedIcons[i / 2].GetComponent<UISpriteManager>().SwapLeft();
+                    instantiatedIcons[i].GetComponent<UISpriteManager>().SwapLeft();
                 }
                 else
                 {
-                    instantiatedIcons[Mathf.FloorToInt(i / 2)].GetComponent<UISpriteManager>().SwapRight();
+                    instantiatedIcons[i-1].GetComponent<UISpriteManager>().SwapRight();
                 }
             }
 
         }
     }
+
+    //Confirms the players and starts the game
     public void ConfirmPlayer()
     {
-        //Confirms the players and starts the game
         if (Input.GetKeyUp(KeyCode.Return))
         {
             if((players != null) && (players.Count != 0) && (instantiatedIcons != null) && (instantiatedIcons.Count != 0) && !gameStarted)
@@ -110,6 +125,7 @@ public class PlayerSelectionUI : MonoBehaviour
         }
     }
 
+    //Checks for key presses, handles long press and register keys that were already used
     void AnyKeyDown()
     {
         if (keysPressed == 0)

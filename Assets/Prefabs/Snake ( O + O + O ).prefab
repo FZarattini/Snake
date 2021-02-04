@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8921815962865529029}
   - component: {fileID: 8921815962865529034}
+  - component: {fileID: -6599446766310778214}
   m_Layer: 0
   m_Name: Snake ( O + O + O )
   m_TagString: Player
@@ -47,8 +48,25 @@ MonoBehaviour:
   - {fileID: 1180717164961373431, guid: 23165705ecd1aa8438f4c01439717fd9, type: 3}
   - {fileID: 1180717164961373431, guid: 23165705ecd1aa8438f4c01439717fd9, type: 3}
   - {fileID: 1180717164961373431, guid: 23165705ecd1aa8438f4c01439717fd9, type: 3}
+  moveDelay: 0.1
   playerSpeed: 3
+  LeftKey: 0
+  RightKey: 0
+  score: 0
+  playerPositionList: []
+  playerBodyBlocks: []
   canRam: 0
-  slowPlayerFactor: 0
-  moveDelay: 0
+  slowPlayerFactor: 0.2
   continues: 0
+--- !u!114 &-6599446766310778214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8921815962865529031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 014e206b5e4e1f049837e0b5901697ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

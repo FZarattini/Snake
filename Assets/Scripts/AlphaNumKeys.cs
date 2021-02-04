@@ -44,8 +44,6 @@ public class AlphaNumKeys : MonoBehaviour
         keys.Add("Alpha7");
         keys.Add("Alpha8");
         keys.Add("Alpha9");
-
-
     }
 
 }

@@ -4,6 +4,12 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
+    bool aiControlled;
+
+    //Setup references
+    LevelGrid levelGrid;
+    SaveLoadState saveLoad;
+
     //The initial blocks of the player
     public List<GameObject> _initialBlocks;
 
@@ -12,21 +18,24 @@ public class Player : MonoBehaviour
     Vector2Int gridPosition;
     float gridMoveTimer;
     float gridMoveTimerMax;
+    float inputDelay;
+    public float moveDelay;
     public float playerSpeed;
     public KeyCode LeftKey;
     public KeyCode RightKey;
+    bool canMove;
 
     //Player specific variables
     int playerSize;
-    bool canMove = true;
+    bool canInput = true;
     public float score = 0f;
-    
-    List<Vector2Int> playerPositionList;
-    List<GameObject> playerBodyBlocks;
-    public bool canRam;
+    public List<Vector2Int> playerPositionList;
+    public List<GameObject> playerBodyBlocks;
     public float slowPlayerFactor;
-    public float moveDelay;
 
+    //Amount of BATTERING_RAMS the player can use on another player
+    public float rams;
+    
     // == 1 if player has unused TIME_TRAVEL block
     // == 0 if player has no TIME_TRAVEL block or already used the latest one
     public int continues = 0;
@@ -35,27 +44,36 @@ public class Player : MonoBehaviour
     public delegate void PlayerMoved(Vector2Int gridPosition, Player player);
     public static event PlayerMoved OnPlayerMoved;
 
+    public delegate void PlayerDied(Player player);
+    public static event PlayerDied OnPlayerDeath;
 
-    public Player(KeyCode LeftKey, KeyCode RightKey, Vector2Int gridPosition)
+
+    //Player constructor
+    public Player(KeyCode LeftKey, KeyCode RightKey, Vector2Int gridPosition, bool aiControlled)
     {
         this.LeftKey = LeftKey;
         this.RightKey = RightKey;
         this.gridPosition = gridPosition;
+        this.aiControlled = aiControlled;
     }
 
     private void Awake()
     {
         //Initialization
+        canMove = true;
         gridMoveDirection = new Vector2Int(0, 1);
         playerPositionList = new List<Vector2Int>();
         playerBodyBlocks = new List<GameObject>();
+        saveLoad = gameObject.GetComponent<SaveLoadState>();
       
         gridMoveTimerMax = 1;
         gridMoveTimer = gridMoveTimerMax;
+        inputDelay = moveDelay;
     }
 
     private void Start()
     {
+
         //Instantiate the initial blocks of the chosen player
         for(int i = 0; i < 3; i++)
         {
@@ -69,34 +87,61 @@ public class Player : MonoBehaviour
 
         LevelGrid.OnBlockCaptured += GrowPlayer;
         LevelGrid.OnBlockCaptured += SlowPlayer;
+
+        SaveCheckpoint();
     }
 
     // Update is called once per frame
     void Update()
     {
-        HandleInput();
-        MovePlayer();   
+        if(!aiControlled)
+            HandleInput();
+
+        if(canMove)
+            MovePlayer();
+
+        //Delay between inputs
+        if (!canInput)
+            inputDelay -= Time.deltaTime;
+
+        if(inputDelay <= 0f)
+        {
+            canInput = true;
+            inputDelay = moveDelay;
+        }
+
+    }
+
+    public void Setup(LevelGrid lg)
+    {
+        this.levelGrid = lg;
     }
 
     //Listens to the input and calls the appropriate methods
     void HandleInput()
     {
-        if(Input.GetKeyDown(LeftKey))
+        if (canInput)
         {
-            UpdatePlayerDirection(-gridMoveDirection.y, gridMoveDirection.x);
-        }
+            if(Input.GetKeyDown(LeftKey))
+            {
+                UpdatePlayerDirection(-gridMoveDirection.y, gridMoveDirection.x);
+                canInput = false;
+            }
 
-        if (Input.GetKeyDown(RightKey))
-        {
-            UpdatePlayerDirection(gridMoveDirection.y, -gridMoveDirection.x);
+            if (Input.GetKeyDown(RightKey))
+            {
+                UpdatePlayerDirection(gridMoveDirection.y, -gridMoveDirection.x);
+                canInput = false;
+            }
         }
     }
 
     //Changes the moving direction of the player
-    void UpdatePlayerDirection(int xValue, int yValue)
+    public void UpdatePlayerDirection(int xValue, int yValue)
     {
         gridMoveDirection.x = xValue;
         gridMoveDirection.y = yValue;
+
     }
 
     //Moves the player on the right direction
@@ -112,8 +157,11 @@ public class Player : MonoBehaviour
             //Inserts a new position on the player's path
             playerPositionList.Insert(0, gridPosition);
 
-            //Moves the player o the appropriate direction
+            //Moves the player on the appropriate direction
             gridPosition += gridMoveDirection;
+
+            //Wraps the player on the level grid
+            gridPosition = levelGrid.ValidateGridPosition(gridPosition);
 
             //Makes the body follow the head
             if(playerPositionList.Count >= playerSize + 1)
@@ -137,9 +185,13 @@ public class Player : MonoBehaviour
             {
                 if((gridPosition.x == playerBodyBlocks[i].transform.position.x) && (gridPosition.y == playerBodyBlocks[i].transform.position.y)) { Die(); }
                
-            }
+            }          
         }
+
         OnPlayerMoved(gridPosition, this);
+
+        //Everytime a player moves, checks if there was collision with other players
+        //levelGrid.CheckPlayerCollision();
     }
 
     //Rotates the player
@@ -163,9 +215,22 @@ public class Player : MonoBehaviour
         return gridPosition;
     }
 
+    //Returns the grid direction of the player
+    public Vector2Int GetGridDirection()
+    {
+        return gridMoveDirection;
+    }
+
+    //Sets the grid position value of the player
     public void SetGridPosition(Vector2Int newGridPosition)
     {
         gridPosition = newGridPosition;
+    }
+
+    //Returns the list of body blocks of the player
+    public List<GameObject> GetBodyBlocks()
+    {
+        return playerBodyBlocks;
     }
 
     //Returns the full list of position occupied by the player (all blocks)
@@ -173,7 +238,7 @@ public class Player : MonoBehaviour
     {
         List<Vector2Int> gridPositionList = new List<Vector2Int>() { gridPosition };
         gridPositionList.AddRange(playerPositionList);
-        return playerPositionList;
+        return gridPositionList;
     }
 
     //Grows the player when a block is captured
@@ -182,6 +247,7 @@ public class Player : MonoBehaviour
         if(player == this)
         {
             playerBodyBlocks.Insert(0, block);
+            playerPositionList.Insert(0, gridPosition);
             playerSize++;
             block.GetComponent<Block>().Ability(this);
         }
@@ -195,7 +261,7 @@ public class Player : MonoBehaviour
     }
 
     //Kills the player handling TIME_TRAVEL situation
-    void Die()
+    public void Die()
     {
         //If player has continues
         if(continues > 0)
@@ -208,7 +274,6 @@ public class Player : MonoBehaviour
             {
                 playerBodyBlocks[i].transform.position = new Vector3(playerPositionList[i].x, playerPositionList[i].y, 0f);
             }
-
 
             continues = 0;
             
@@ -223,32 +288,59 @@ public class Player : MonoBehaviour
             playerBodyBlocks.Clear();
             playerPositionList.Clear();
             DestroyImmediate(this.gameObject);
+            OnPlayerDeath(this);
         }
     }
 
-    void Ram()
+    public void Ram(Player otherPlayer)
     {
+        if (rams > 0)
+        {
+            otherPlayer.SetCanMove(false);
 
+            rams--;
+            return;
+        }
+        else
+        {
+            Die();
+        }
+    }
+
+    //Sets the variable canMove
+    public void SetCanMove(bool value)
+    {
+        canMove = value;
+    }
+
+    public bool GetAIControlled()
+    {
+        return aiControlled;
+    }
+
+    public void SetAIControlled(bool value)
+    {
+        aiControlled = value;
     }
 
     //Saves the position of the player
     public void SaveCheckpoint()
     {
-        SaveLoadState.SaveState(playerPositionList, gridPosition, playerBodyBlocks, gridMoveDirection);
+        saveLoad.SaveState(playerPositionList, gridPosition, playerBodyBlocks, gridMoveDirection);
         continues++;
     }
 
-    //Loads the last position of the player
+    //Loads the last checkpoint of the player
     void LoadLastCheckpoint()
     {
         List<GameObject> tempBlocks = new List<GameObject>();
         List<Vector2Int> tempPositions = new List<Vector2Int>();
         GameObject removedObj;
 
-        gridPosition = new Vector2Int(SaveLoadState.LoadGridPosition().x, SaveLoadState.LoadGridPosition().y);
-        gridMoveDirection = new Vector2Int(SaveLoadState.LoadDirection().x, SaveLoadState.LoadDirection().y);
-        tempBlocks = SaveLoadState.LoadBlocks();
-        tempPositions = SaveLoadState.LoadPositions();
+        gridPosition = new Vector2Int(saveLoad.LoadGridPosition().x, saveLoad.LoadGridPosition().y);
+        gridMoveDirection = new Vector2Int(saveLoad.LoadDirection().x, saveLoad.LoadDirection().y);
+        tempBlocks = saveLoad.LoadBlocks();
+        tempPositions = saveLoad.LoadPositions();
 
         for (int i = 0; i < playerBodyBlocks.Count; i++)
         {
@@ -259,7 +351,7 @@ public class Player : MonoBehaviour
             }
         }
 
-        playerPositionList = new List<Vector2Int>(SaveLoadState.LoadPositions());
+        playerPositionList = new List<Vector2Int>(saveLoad.LoadPositions());
     }
 
 }
